@@ -1,0 +1,145 @@
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background-color: #f5f7fb;
+  color: #333;
+}
+
+.app-container {
+  display: flex;
+  height: 100vh;
+}
+
+/* Sidebar Styles */
+.sidebar {
+  width: 300px;
+  background-color: #ffffff;
+  border-right: 1px solid #e0e0e0;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.notes-list {
+  margin-top: 20px;
+  overflow-y: auto;
+  flex-grow: 1;
+}
+
+.note-item {
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.2s;
+}
+
+.note-item:hover {
+  background: #edf2f7;
+}
+
+.note-item.active {
+  background: #e2e8f0;
+  border-color: #cbd5e1;
+}
+
+.note-item h3 {
+  margin: 0 0 5px 0;
+  font-size: 16px;
+}
+
+.timestamp {
+  font-size: 11px;
+  color: #718096;
+}
+
+/* Main Content Styles */
+.main-content {
+  flex-grow: 1;
+  padding: 40px;
+  max-width: 600px;
+}
+
+.note-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.note-form input, .note-form textarea {
+  padding: 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.note-form button {
+  padding: 12px;
+  background-color: #3182ce;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.note-form button:hover {
+  background-color: #2b6cb0;
+}
+
+.preview-section {
+  margin-top: 30px;
+}
+
+.preview-section hr {
+  border: 0;
+  border-top: 1px solid #e2e8f0;
+  margin-bottom: 20px;
+}
+
+.note-body {
+  background: white;
+  padding: 20px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  white-space: pre-wrap;
+}
+.auth-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background-color: #f5f7fb;
+}
+.auth-card {
+  background: white;
+  padding: 40px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  width: 100%;
+  max-width: 350px;
+  text-align: center;
+}
+.toggle-auth {
+  margin-top: 15px;
+  font-size: 13px;
+  color: #3182ce;
+  cursor: pointer;
+}
+.sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  font-size: 12px;
+}
+.logout-btn {
+  padding: 4px 8px;
+  background: #e53e3e;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}

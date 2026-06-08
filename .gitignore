@@ -1,0 +1,9 @@
+# Ignore local dependencies
+node_modules/
+
+# Ignore compiled javascript files if any
+dist/
+build/
+
+# Ignore environment variables/secrets
+.env
