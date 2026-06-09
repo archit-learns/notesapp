@@ -29,6 +29,10 @@ export default function App() {
   const [editTitle, setEditTitle] = useState('');
   const [editContent, setEditContent] = useState('');
 
+  const [reminderMessage, setReminderMessage] = useState('');
+  const [delaySeconds, setDelaySeconds] = useState('');
+  const [repeatSeconds, setRepeatSeconds] = useState('');
+
   useEffect(()=>{
 
     if (!token) return;
@@ -149,6 +153,70 @@ const handleDeleteNote = async (id: string) => {
     } catch (err) { console.error(err); alert('Could not delete note'); }
   };
 
+const handleScheduleReminder = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (!activeNote || !token || !reminderMessage.trim()) return;
+
+  // Build the payload dynamically based on what the user filled out
+  const payload: {
+    noteId: string;
+    message: string;
+    delayInSeconds?: number;
+    repeatEverySeconds?: number;
+  } = {
+    noteId: activeNote.id,
+    message: reminderMessage,
+  };
+
+  if (delaySeconds) payload.delayInSeconds = parseInt(delaySeconds, 10);
+  if (repeatSeconds) payload.repeatEverySeconds = parseInt(repeatSeconds, 10);
+
+  try {
+    const response = await fetch('http://localhost:5000/api/notes/reminder', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`, // Pass our secure passport
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Failed to schedule alarm');
+
+    alert('⏰ Alarm scheduled beautifully inside Redis!');
+    
+    // Clear the form fields
+    setReminderMessage('');
+    setDelaySeconds('');
+    setRepeatSeconds('');
+  } catch (err: unknown) {
+    alert(err instanceof Error ? err.message : 'An error occurred');
+  }
+};
+
+const handleStopReminder = async () => {
+  if (!activeNote || !token) return;
+
+  try {
+    const response = await fetch('http://localhost:5000/api/notes/reminder/stop', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ noteId: activeNote.id })
+    });
+
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Failed to stop alarm');
+
+    alert('🛑 Alarm successfully terminated inside Redis!');
+  } catch (err: unknown) {
+    alert(err instanceof Error ? err.message : 'An error occurred');
+  }
+};
+
 const startEditing = () => {
     if (!activeNote) return;
     setEditTitle(activeNote.title);
@@ -256,6 +324,50 @@ const startEditing = () => {
                   </div>
                 </div>
                 <p className="note-body">{activeNote.content}</p>
+                {/* ⏰ NEW: Alarm Scheduler Panel */}
+                <div className="reminder-panel" style={{ marginTop: '20px', padding: '15px', border: '1px dashed #ccc', borderRadius: '6px' }}>
+                  <h3>⏰ Schedule a Reminder for this Note</h3>
+                  <form onSubmit={handleScheduleReminder} className="note-form">
+                    <input 
+                      type="text" 
+                      placeholder="Alarm alert message (e.g., Take a break!)..." 
+                      value={reminderMessage} 
+                      onChange={(e) => setReminderMessage(e.target.value)} 
+                      required
+                    />
+                    <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                      <input 
+                        type="number" 
+                        placeholder="One-time delay (seconds)" 
+                        value={delaySeconds} 
+                        onChange={(e) => { setDelaySeconds(e.target.value); setRepeatSeconds(''); }} 
+                      />
+                      <span style={{ alignSelf: 'center' }}>OR</span>
+                      <input 
+                        type="number" 
+                        placeholder="Repeat every (seconds)" 
+                        value={repeatSeconds} 
+                        onChange={(e) => { setRepeatSeconds(e.target.value); setDelaySeconds(''); }} 
+                      />
+                    </div>
+                    <button type="submit" style={{ marginTop: '10px', backgroundColor: '#ff9800', color: 'white' }}>
+                      Set Active Alarm
+                    </button>
+                  </form>
+
+                  {/* Insert this right below your closing </form> tag inside the reminder-panel */}
+                  <div style={{ marginTop: '15px', borderTop: '1px solid #eee', paddingTop: '10px' }}>
+                    <p style={{ fontSize: '0.85em', color: '#666' }}>
+                      have an active loop running for this note? Stop it instantly:
+                    </p>
+                    <button 
+                      onClick={handleStopReminder} 
+                      style={{ backgroundColor: '#f44336', color: 'white', width: '100%' }}
+                    >
+                      🛑 Kill Active Alarm
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
           </section>

@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { NoteService } from '../services/noteService';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
+import { reminderQueue } from '../config/queue';
 
 export class NoteController {
   private noteService = new NoteService();
@@ -70,5 +71,69 @@ export class NoteController {
         return res.status(500).json({ error: 'Internal Server Error' });
     }
     };
+
+    scheduleReminder = async (req: AuthenticatedRequest, res: Response) => {
+        const { noteId, message, delayInSeconds, repeatEverySeconds } = req.body;
+
+        try {
+        let jobOptions: any = {};
+
+        // Strategy A: If it's a delayed one-time alarm
+        if (delayInSeconds) {
+            jobOptions.delay = delayInSeconds * 1000; // BullMQ operates in milliseconds
+        }
+
+        // Strategy B: If it's a cron-like repeating alarm (every x seconds/minutes)
+        if (repeatEverySeconds) {
+            jobOptions.repeat = {
+            every: repeatEverySeconds * 1000,
+            };
+        }
+
+        // Push the job payload directly into the Redis queue!
+        const job = await reminderQueue.add(
+            'send-reminder',
+            { noteId, message },
+            jobOptions
+        );
+
+        return res.json({
+            success: true,
+            message: 'Alarm scheduled beautifully!',
+            jobId: job.id,
+        });
+        } catch (err) {
+        console.error(err);
+        return res.status(500).json({ error: 'Failed to schedule reminder' });
+        }
+    };
+
+stopReminder = async (req: AuthenticatedRequest, res: Response) => {
+    const { noteId } = req.body;
+
+    try {
+      // 1. Fetch all repeatable jobs currently registered inside our Redis queue
+      const repeatableJobs = await reminderQueue.getRepeatableJobs();
+
+      // 2. Find the specific job that matches this noteId
+      // BullMQ names repeating jobs using a strict pattern, or we can look inside the metadata
+      const targetJob = repeatableJobs.find(job => job.id?.includes(noteId) || job.name.includes(noteId));
+
+      if (!targetJob) {
+        return res.status(404).json({ error: 'No active repeating alarm found for this note.' });
+      }
+
+      // 3. Command Redis to completely delete the schedule using its internal Repeat Key
+      await reminderQueue.removeRepeatableByKey(targetJob.key);
+
+      return res.json({
+        success: true,
+        message: 'Alarm stopped and scrubbed from Redis completely!'
+      });
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Failed to stop the reminder' });
+    }
+  };
 
 }

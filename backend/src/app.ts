@@ -18,6 +18,8 @@ app.post('/api/auth/login', authController.login);
 // Notes Domain Routes
 app.get('/api/notes', authenticateToken, noteController.getAll);
 app.post('/api/notes', authenticateToken, noteController.create);
+app.post('/api/notes/reminder', authenticateToken, noteController.scheduleReminder);
+app.post('/api/notes/reminder/stop', authenticateToken, noteController.stopReminder);
 app.put('/api/notes/:id', authenticateToken, noteController.update);
 app.delete('/api/notes/:id', authenticateToken, noteController.delete);
 
