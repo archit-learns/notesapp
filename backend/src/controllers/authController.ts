@@ -7,8 +7,8 @@ export class AuthController {
   signup = async (req: Request, res: Response) => {
     const { email, password } = req.body;
     try {
-      const userId = await this.authService.signup(email, password);
-      return res.status(201).json({ message: 'User created!', userId });
+      const result = await this.authService.signup(email, password);
+      return res.status(201).json({ message: 'User created!', ...result });
     } catch (err: any) {
       if (err.message === 'EMAIL_EXISTS' || err.message === 'MISSING_FIELDS') {
         return res.status(400).json({ error: err.message });

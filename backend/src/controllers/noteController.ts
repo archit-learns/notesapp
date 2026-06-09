@@ -1,11 +1,12 @@
 import { Request, Response } from 'express';
 import { NoteService } from '../services/noteService';
+import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 
 export class NoteController {
   private noteService = new NoteService();
 
-  create = async (req: Request, res: Response) => {
-    const userId = req.headers['x-user-id'] as string;
+  create = async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.userId;
     const { id, title, content, createdAt } = req.body;
 
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
@@ -23,8 +24,8 @@ export class NoteController {
     }
   };
 
-  delete = async (req: Request, res: Response) => {
-    const userId = req.headers['x-user-id'] as string;
+  delete = async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.userId;
     const noteId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
 
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
@@ -40,8 +41,8 @@ export class NoteController {
 
 
     // Add inside the NoteController class
-    getAll = async (req: Request, res: Response) => {
-    const rawUserId = req.headers['x-user-id'];
+    getAll = async (req: AuthenticatedRequest, res: Response) => {
+    const rawUserId = req.userId;
     if (!rawUserId) return res.status(401).json({ error: 'Unauthorized' });
     const userId = Array.isArray(rawUserId) ? rawUserId[0] : rawUserId;
 
@@ -53,8 +54,8 @@ export class NoteController {
     }
     };
 
-    update = async (req: Request, res: Response) => {
-    const rawUserId = req.headers['x-user-id'];
+    update = async (req: AuthenticatedRequest, res: Response) => {
+    const rawUserId = req.userId;
     const noteId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const { title, content } = req.body;
 

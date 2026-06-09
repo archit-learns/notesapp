@@ -12,7 +12,7 @@ interface Note {
 
 export default function App() {
 
-  const [userId, setUserId] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSignup, setIsSignup] = useState(false);
@@ -31,11 +31,11 @@ export default function App() {
 
   useEffect(()=>{
 
-    if (!userId) return;
+    if (!token) return;
 
     fetch('http://localhost:5000/api/notes', {
       headers: {
-        'X-User-Id': userId,
+        'Authorization': `Bearer ${token}`
       },
     }).then((res)=>{
       if(!res.ok) throw new Error('Failed to fetch notes');
@@ -45,7 +45,7 @@ export default function App() {
     }).catch((err)=>{
       console.error(err);
     });
-  },[userId]);
+  },[token]);
 
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,8 +67,8 @@ export default function App() {
         alert('Signup successful! Please log in.');
         setIsSignup(false);
       } else {
-        // Logged in! Save the user ID to state
-        setUserId(data.userId);
+
+        setToken(data.token);
       }
       setPassword('');
     } catch (err) {
@@ -79,7 +79,7 @@ export default function App() {
   // 3. Handle adding a note
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !content.trim()) return;
+    if (!title.trim() || !content.trim() || !token) return;
 
     const newNote: Note = {
       id: crypto.randomUUID(), // Generates a unique ID in modern browsers
@@ -93,14 +93,14 @@ export default function App() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-User-Id': userId,
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(newNote),
       });
 
-      if (!response.ok) throw new Error('Failed to add note');
-
       const savedNote = await response.json();
+
+      if (!response.ok) throw new Error('Failed to add note');
 
       setNotes([savedNote, ...notes]);
       setTitle('');
@@ -112,17 +112,17 @@ export default function App() {
 
 
   const handleUpdateNote = async () => {
-    if (!activeNote || !userId) return;
+    if (!activeNote || !token) return;
 
     try {
       const response = await fetch(`http://localhost:5000/api/notes/${activeNote.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'X-User-Id': userId },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ title: editTitle, content: editContent }),
       });
 
-      if (!response.ok) throw new Error('Update failed');
       const updatedNote = await response.json();
+      if (!response.ok) throw new Error('Update failed');
 
       // Sync local state array
       setNotes(notes.map(n => n.id === updatedNote.id ? updatedNote : n));
@@ -133,12 +133,12 @@ export default function App() {
 
 
 const handleDeleteNote = async (id: string) => {
-    if (!userId || !confirm('Are you sure you want to delete this note?')) return;
+    if (!token || !confirm('Are you sure you want to delete this note?')) return;
 
     try {
       const response = await fetch(`http://localhost:5000/api/notes/${id}`, {
         method: 'DELETE',
-        headers: { 'X-User-Id': userId },
+        headers: { 'Authorization': `Bearer ${token}` },
       });
 
       if (!response.ok) throw new Error('Delete failed');
@@ -157,7 +157,7 @@ const startEditing = () => {
   };
 
 // --- RENDER CONDITION: Show Auth Screen if not logged in ---
-  if (!userId) {
+  if (!token) {
     return (
       <div className="auth-container">
         <div className="auth-card">
@@ -191,7 +191,7 @@ const startEditing = () => {
       <aside className="sidebar">
         <div className="sidebar-header">
           <h3>Logged in as: {email}</h3>
-          <button onClick={() => { setUserId(null); setNotes([]); }} className="logout-btn">Logout</button>
+          <button onClick={() => { setToken(null); setNotes([]); }} className="logout-btn">Logout</button>
         </div>
         <h2>My Notes ({notes.length})</h2>
         <div className="notes-list">
