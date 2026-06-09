@@ -1,5 +1,6 @@
 import { NoteRepository } from '../repositories/note.repository';
 import { AuditRepository } from '../repositories/audit.repository';
+import { redisClient } from '../config/redis';
 
 export class NoteService {
   private noteRepo = new NoteRepository();
@@ -20,6 +21,9 @@ export class NoteService {
 
     // 4. Side Effect
     await this.auditRepo.logAction(userId, 'CREATE', id);
+
+    await redisClient.del(`user:${userId}:notes`);
+    console.log('🧹 CACHE EVICTED: Cleared out stale data after note creation.');
   }
 
   async deleteNote(noteId: string, userId: string) {
@@ -28,18 +32,46 @@ export class NoteService {
 
     await this.noteRepo.delete(noteId);
     await this.auditRepo.logAction(userId, 'DELETE', noteId);
+
+    await redisClient.del(`user:${userId}:notes`);
+    console.log('🧹 CACHE EVICTED: Cleared out stale data after note deletion.');
   }
 
 // Add inside the NoteService class
 async getAllNotes(userId: string) {
-  const rows = await this.noteRepo.findAllByUserId(userId);
-  // Map internal database names back to what the system/frontend expects
-  return rows.map(row => ({
-    id: row.id,
-    title: row.title,
-    content: row.content,
-    createdAt: row.created_at
-  }));
+
+  const cacheKey = `user:${userId}:notes`;
+
+  try{
+    const cachedNotes = await redisClient.get(cacheKey);
+    if (cachedNotes) {
+            console.log('⚡ CACHE HIT: Fetching notes directly from Redis RAM!');
+            return JSON.parse(cachedNotes);
+        }
+  }
+  catch(err){
+    console.error('Cache retrieval error:', err);
+  }
+
+// 2. CACHE MISS: Go to PostgreSQL (Disk)
+    console.log('🐌 CACHE MISS: Hitting PostgreSQL Disk storage...');
+    const rows = await this.noteRepo.findAllByUserId(userId);
+    const formattedNotes = rows.map(row => ({
+      id: row.id,
+      title: row.title,
+      content: row.content,
+      createdAt: row.created_at
+    }));
+
+    try {
+      // 3. Save a copy into Redis for next time. 
+      // EX: 300 sets a Time-To-Live (TTL) of 5 minutes so RAM cleans itself up automatically.
+      await redisClient.setEx(cacheKey, 300, JSON.stringify(formattedNotes));
+    } catch (cacheErr) {
+      console.error('Failed to save to Redis cache:', cacheErr);
+    }
+
+    return formattedNotes;
 }
 
 async updateNote(noteId: string, userId: string, title: string, content: string) {
@@ -48,6 +80,9 @@ async updateNote(noteId: string, userId: string, title: string, content: string)
 
   const updatedRow = await this.noteRepo.update(noteId, title, content);
   await this.auditRepo.logAction(userId, 'UPDATE', noteId);
+
+    await redisClient.del(`user:${userId}:notes`);
+    console.log('🧹 CACHE EVICTED: Cleared out stale data after note edit.');
 
   return {
     id: updatedRow.id,

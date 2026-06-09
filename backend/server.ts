@@ -1,4 +1,5 @@
 import app from './src/app';
+import './src/config/redis';
 
 const PORT = 5000;
 app.listen(PORT, () => {
